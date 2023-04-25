@@ -3,6 +3,8 @@ from flask_bcrypt import Bcrypt
 from flask_session import Session
 from models import db, User
 from config import AppConfig
+from models import Role
+import json
 
 app = Flask(__name__)
 app.config.from_object(AppConfig)
@@ -12,6 +14,7 @@ server_session = Session(app)
 db.init_app(app)
 
 with app.app_context():
+    # db.drop_all()
     db.create_all()
 
 @app.route("/register", methods=["POST"])
@@ -27,7 +30,7 @@ def register_user():
         return jsonify({"error": "User already exists"}), 409
 
     hashed_pass = bcrypt.generate_password_hash(password)
-    new_user = User(email=email, password=hashed_pass, first_name=first_name, last_name=last_name)
+    new_user = User(email=email, password=hashed_pass, first_name=first_name, last_name=last_name, role=Role.CLIENT)
     db.session.add(new_user)
     db.session.commit()
 
@@ -53,7 +56,8 @@ def login_user():
 
     return jsonify({
         "id": user.id,
-        "email": user.email
+        "email": user.email,
+        "role": user.role.name
     })
 
 @app.route("/user", methods=["GET"])

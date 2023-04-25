@@ -1,10 +1,15 @@
 from flask_sqlalchemy import SQLAlchemy
 from uuid import uuid4
+from enum import Enum
 
 db = SQLAlchemy()
 
 def get_uuid():
     return uuid4().hex
+
+class Role(Enum):
+    ADMIN=0
+    CLIENT=1
 
 class User(db.Model):
     __tablename__ = "user"
@@ -13,3 +18,4 @@ class User(db.Model):
     password = db.Column(db.Text, nullable=False)
     first_name = db.Column(db.Text, nullable=False)
     last_name = db.Column(db.Text, nullable=False)
+    role = db.Column(db.Enum(Role), nullable=False)
