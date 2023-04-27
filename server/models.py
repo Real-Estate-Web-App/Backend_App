@@ -11,6 +11,15 @@ class Role(Enum):
     ADMIN=0
     CLIENT=1
 
+class Type(Enum):
+    RENT=0
+    BUY=1
+
+class BuildingType(Enum):
+    STUDIO=0
+    APARTMENT=1
+    HOUSE=2
+
 class User(db.Model):
     __tablename__ = "user"
     id = db.Column(db.String(32), primary_key=True, unique=True, default=get_uuid)
@@ -19,3 +28,15 @@ class User(db.Model):
     first_name = db.Column(db.Text, nullable=False)
     last_name = db.Column(db.Text, nullable=False)
     role = db.Column(db.Enum(Role), nullable=False)
+
+class Buildings(db.Model):
+    __tablename__ = "buildings"
+    id = db.Column(db.String(32), primary_key=True, unique=True, default=get_uuid)
+    type = db.Column(db.Enum(Type), nullable=False)
+    building_type = db.Column(db.Enum(BuildingType), nullable=False)
+    image = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.String(200))
+    address = db.Column(db.String(30), nullable=False)
+    total_price = db.Column(db.String(10), nullable=False)
+    nb_of_rooms = db.Column(db.String(10), nullable=False)
+    area = db.Column(db.String(10), nullable=False)

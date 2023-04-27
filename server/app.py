@@ -1,11 +1,10 @@
-from flask import Flask, request, abort, jsonify, session
+from flask import Flask, request, jsonify
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS, cross_origin
 from flask_session import Session
-from models import db, User
+from models import db, User, Buildings
 from config import AppConfig
 from models import Role
-import json
 
 app = Flask(__name__)
 app.config.from_object(AppConfig)
@@ -18,6 +17,8 @@ db.init_app(app)
 with app.app_context():
     # db.drop_all()
     db.create_all()
+
+# User requests:
 
 @cross_origin
 @app.route("/register", methods=["POST"])
@@ -109,6 +110,97 @@ def update_user_profile():
     db.session.commit()
 
     return "200"
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Buildings requests:
+@cross_origin
+@app.route("/createBuilding", methods=["POST"])
+def create_building():
+    type = request.json["type"]
+    building_type = request.json["building_type"]
+    image = request.json["image"]
+    description = request.json["description"]
+    address = request.json["address"]
+    total_price = request.json["total_price"]
+    nb_of_rooms = request.json["nb_of_rooms"]
+    area = request.json["area"]
+
+    new_building = Buildings(type=type, building_type=building_type, image=image, description=description, address=address, total_price=total_price, nb_of_rooms=nb_of_rooms, area=area)
+    db.session.add(new_building)
+    db.session.commit()
+
+    return jsonify({
+        "id": new_building.id,
+        "type": new_building.type.name,
+        "image": new_building.image,
+        "description": new_building.description,
+        "address": new_building.address,
+        "total_price": new_building.total_price,
+        "nb_of_rooms": new_building.nb_of_rooms,
+        "area": new_building.area,
+    })
+
+@cross_origin
+@app.route("/getBuildings", methods=["GET"])
+def get_all_buildings():
+
+    buildings = Buildings.query.all()
+    proccessed_buildings = []
+
+    for building in buildings:
+        returned_building = {
+            "id": building.id,
+            "type": building.type.name,
+            "building_type": building.building_type.name,
+            "image": building.image,
+            "description": building.description,
+            "address": building.address,
+            "total_price": building.total_price,
+            "nb_of_rooms": building.nb_of_rooms,
+            "area": building.area
+        }
+        proccessed_buildings.append(returned_building)
+
+    return jsonify(
+        proccessed_buildings
+    )
+
+@cross_origin
+@app.route("/updateBuilding", methods=["POST"])
+def update_building():
+    id = request.json["id"]
+    type = request.json["type"]
+    image = request.json["image"]
+    description = request.json["description"]
+    total_price = request.json["total_price"]
+    nb_of_rooms = request.json["nb_of_rooms"]
+    area = request.json["area"]
+
+    building = Buildings.query.filter_by(id=id).first()
+    building.type = type
+    building.image = image
+    building.description = description
+    building.total_price = total_price
+    building.nb_of_rooms = nb_of_rooms
+    building.area = area
+
+    db.session.add(building)
+    db.session.commit()
+
+    return "200"
+
+@cross_origin
+@app.route("/deleteBuilding", methods=["POST"])
+def delete_building():
+    id = request.json["id"]
+
+    Buildings.query.filter_by(id=id).delete()
+    db.session.commit()
+
+    return "200"
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if __name__ == "__main__":
     app.run(debug=True)
