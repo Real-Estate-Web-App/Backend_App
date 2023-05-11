@@ -40,3 +40,11 @@ class Buildings(db.Model):
     total_price = db.Column(db.String(10), nullable=False)
     nb_of_rooms = db.Column(db.String(10), nullable=False)
     area = db.Column(db.String(10), nullable=False)
+
+class Appointment(db.Model):
+    __tablename__ = "appointment"
+    id = db.Column(db.String(32), primary_key=True, unique=True, default=get_uuid)
+    building_id = db.Column(db.String(32), nullable=False)
+    user_id = db.Column(db.String(32), nullable=False)
+    app_date = db.Column(db.String(10), nullable=False)
+    app_time = db.Column(db.String(5), nullable=False) 

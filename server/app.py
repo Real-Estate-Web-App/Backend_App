@@ -1,8 +1,9 @@
+from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS, cross_origin
 from flask_session import Session
-from models import db, User, Buildings
+from models import db, User, Buildings, Appointment
 from config import AppConfig
 from models import Role
 
@@ -199,6 +200,68 @@ def delete_building():
     db.session.commit()
 
     return "200"
+
+@cross_origin
+@app.route("/makeAppointment", methods=["POST"])
+def make_appointment():
+    building_id = request.json["building_id"]
+    user_id = request.json["user_id"]
+    app_date = request.json["app_date"]
+    app_time = request.json["app_time"]
+
+    if app_time[0] == "0":
+        if app_time[1] == "9":
+                app_time_end = "10" + app_time[2:5]
+        else:
+                app_time_end = "0" + str(int(app_time[1]) + 1) + app_time[2:5]
+    else:
+        app_time_end = str(int(app_time[0:2]) + 1) + app_time[2:5]
+
+    current_date_time = datetime.now()
+    date = current_date_time.strftime("%Y-%m-%d")
+    time = current_date_time.strftime("%H:%M")
+    print("Date: " + date)
+    print("Time: " + time)
+
+    if (app_date < date or (app_date == date and app_time < time)):
+        return jsonify({"error": "Date and time can't be in the past"}), 401
+
+    appointments = Appointment.query.filter_by(building_id=building_id)
+    for appointment in appointments:
+        appointment_date = appointment.app_date
+        if appointment_date == app_date:
+            
+            appointment_time = appointment.app_time
+            if appointment_time[0] == "0":
+                if appointment_time[1] == "9":
+                    appointment_time_end = "10" + appointment_time[2:5]
+                else:
+                    appointment_time_end = "0" + str(int(appointment_time[1]) + 1) + appointment_time[2:5]
+            else:
+                appointment_time_end = str(int(appointment_time[0:2]) + 1) + appointment_time[2:5]
+            
+            print("time start: " + appointment_time + ", time end: " + appointment_time_end)
+            
+            if appointment_time <= app_time and app_time_end <= appointment_time_end:
+                print("Primul if")
+                return jsonify({"error": "There is already an appointment at this date and hour"}), 401
+            else: 
+                if appointment_time <= app_time and app_time < appointment_time_end and appointment_time_end <= app_time_end:
+                    print("Al doilea if")
+                    return jsonify({"error": "There is already an appointment at this date and hour"}), 401
+                else:
+                    if app_time <= appointment_time and appointment_time < app_time_end and app_time_end <= appointment_time_end:
+                        print("Al treilea if")
+                        return jsonify({"error": "There is already an appointment at this date and hour"}), 401
+    
+
+    new_appointment = Appointment(building_id=building_id, user_id=user_id, app_date=app_date, app_time=app_time)
+    db.session.add(new_appointment)
+    db.session.commit()
+
+    return jsonify({
+        "app_id": new_appointment.id,
+    }), "200"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
