@@ -254,6 +254,7 @@ def make_appointment():
                         print("Al treilea if")
                         return jsonify({"error": "There is already an appointment at this date and hour"}), 401
     
+    # To do: da sugestie de cea mai apropiata data si ora libera;
 
     new_appointment = Appointment(building_id=building_id, user_id=user_id, app_date=app_date, app_time=app_time)
     db.session.add(new_appointment)
@@ -262,6 +263,18 @@ def make_appointment():
     return jsonify({
         "app_id": new_appointment.id,
     }), "200"
+
+@cross_origin
+@app.route("/getAppointments", methods=["GET"])
+def get_all_appointments_for_month():
+    args = request.args
+    building_id = args.get("building_id")
+    month = args.get("month")
+    
+    print("Building id: " + building_id)
+    print("Month: " + month)
+
+    return "200"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
