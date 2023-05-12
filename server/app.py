@@ -270,11 +270,25 @@ def get_all_appointments_for_month():
     args = request.args
     building_id = args.get("building_id")
     month = args.get("month")
+
+    all_appointments = Appointment.query.filter_by(building_id=building_id)
+    this_months_appointments = {}
+    for appointment in all_appointments:
+        app_month = appointment.app_date[5:7]
+        if app_month == month:
+            day = appointment.app_date[8:10]
+            if day in this_months_appointments.keys():
+                this_months_appointments[day] += 1
+            else:
+                this_months_appointments[day] = 1
+    
+    for key, value in this_months_appointments.items():
+        print("Day " + key + ", has " + str(value) + " appointments")
     
     print("Building id: " + building_id)
     print("Month: " + month)
 
-    return "200"
+    return jsonify(this_months_appointments), "200"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
