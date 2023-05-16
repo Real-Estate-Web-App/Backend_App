@@ -201,6 +201,70 @@ def delete_building():
 
     return "200"
 
+def get_suggestion(free_time, free_time_end, app_date, appointments):
+    for appointment in appointments:
+        appointment_date = appointment.app_date
+        if appointment_date == app_date:
+            appointment_time = appointment.app_time
+            appointment_time_end = str(int(appointment_time[0:2]) + 1) + appointment_time[2:5]
+            if len(appointment_time_end) != 5:
+                appointment_time_end = "0" + appointment_time_end
+
+            if appointment_time <= free_time and free_time_end <= appointment_time_end:
+                return None
+            else: 
+                if appointment_time <= free_time and free_time < appointment_time_end and appointment_time_end <= free_time_end:
+                    return None
+                else:
+                    if free_time <= appointment_time and appointment_time < free_time_end and free_time_end <= appointment_time_end:
+                        return None
+    return free_time
+
+def get_suggestions_for_later(new_time, app_date, appointments):
+
+    free_time_plus = str(int(new_time[0:2])) + new_time[2:5]
+    if len(free_time_plus) != 5:
+        free_time_plus = "0" + free_time_plus
+        
+    free_time_plus_end = str(int(free_time_plus[0:2]) + 1) + free_time_plus[2:5]
+    if len(free_time_plus_end) != 5:
+        free_time_plus_end = "0" + free_time_plus_end
+
+    result_time = None
+    while(free_time_plus < "24:00" and result_time is None):
+        result_time = get_suggestion(free_time_plus, free_time_plus_end, app_date, appointments)
+        free_time_plus = str(int(free_time_plus[0:2]) + 1) + free_time_plus[2:5]
+        if len(free_time_plus) != 5:
+            free_time_plus = "0" + free_time_plus
+
+        free_time_plus_end = str(int(free_time_plus[0:2]) + 1) + free_time_plus[2:5]
+        if len(free_time_plus_end) != 5:
+            free_time_plus_end = "0" + free_time_plus_end
+    
+    return result_time
+
+def get_suggestions_for_earlier(new_time, app_date, appointments):
+    free_time_minus = str(int(new_time[0:2])) + new_time[2:5]
+    if len(free_time_minus) != 5:
+        free_time_minus = "0" + free_time_minus
+        
+    free_time_minus_end = str(int(free_time_minus[0:2]) + 1) + free_time_minus[2:5]
+    if len(free_time_minus_end) != 5:
+        free_time_minus_end = "0" + free_time_minus_end
+
+    result_time = None
+    while(free_time_minus > "00:00" and result_time is None):
+        # print("Ealier time: " + free_time_minus)
+        result_time = get_suggestion(free_time_minus, free_time_minus_end, app_date, appointments)
+        free_time_minus = str(int(free_time_minus[0:2]) - 1) + free_time_minus[2:5]
+        if len(free_time_minus) != 5:
+            free_time_minus = "0" + free_time_minus
+
+        free_time_minus_end = str(int(free_time_minus[0:2]) + 1) + free_time_minus[2:5]
+        if len(free_time_minus_end) != 5:
+            free_time_minus_end = "0" + free_time_minus_end
+    return result_time
+
 @cross_origin
 @app.route("/makeAppointment", methods=["POST"])
 def make_appointment():
@@ -209,52 +273,107 @@ def make_appointment():
     app_date = request.json["app_date"]
     app_time = request.json["app_time"]
 
-    if app_time[0] == "0":
-        if app_time[1] == "9":
-                app_time_end = "10" + app_time[2:5]
-        else:
-                app_time_end = "0" + str(int(app_time[1]) + 1) + app_time[2:5]
-    else:
-        app_time_end = str(int(app_time[0:2]) + 1) + app_time[2:5]
+    error = 0
+    
+    app_time_end = str(int(app_time[0:2]) + 1) + app_time[2:5]
+    if len(app_time_end) != 5:
+        app_time_end = "0" + app_time_end
+    
+    # print("received time: " + app_time)
+    # print("received date:" + app_date)
 
     current_date_time = datetime.now()
     date = current_date_time.strftime("%Y-%m-%d")
     time = current_date_time.strftime("%H:%M")
-    print("Date: " + date)
-    print("Time: " + time)
 
     if (app_date < date or (app_date == date and app_time < time)):
-        return jsonify({"error": "Date and time can't be in the past"}), 401
+        error = 1
 
     appointments = Appointment.query.filter_by(building_id=building_id)
+    result_plus = None
+    result_minus = None
     for appointment in appointments:
         appointment_date = appointment.app_date
         if appointment_date == app_date:
             
             appointment_time = appointment.app_time
-            if appointment_time[0] == "0":
-                if appointment_time[1] == "9":
-                    appointment_time_end = "10" + appointment_time[2:5]
-                else:
-                    appointment_time_end = "0" + str(int(appointment_time[1]) + 1) + appointment_time[2:5]
-            else:
-                appointment_time_end = str(int(appointment_time[0:2]) + 1) + appointment_time[2:5]
-            
-            print("time start: " + appointment_time + ", time end: " + appointment_time_end)
-            
+            appointment_time_end = str(int(appointment_time[0:2]) + 1) + appointment_time[2:5]
+            if len(appointment_time_end) != 5:
+                appointment_time_end = "0" + appointment_time_end
+
             if appointment_time <= app_time and app_time_end <= appointment_time_end:
-                print("Primul if")
-                return jsonify({"error": "There is already an appointment at this date and hour"}), 401
+                error = 2
+                error_time = appointment_time
+                last_result_plus = get_suggestions_for_later(error_time, app_date, appointments)
+                last_result_minus = get_suggestions_for_earlier(error_time, app_date, appointments)
+                if result_plus is None:
+                    result_plus = last_result_plus
+                else:
+                    if result_plus > last_result_plus:
+                        result_plus = last_result_plus
+                if result_minus is None:
+                    result_minus = last_result_minus
+                else:
+                    if result_minus < last_result_minus:
+                        result_minus = last_result_minus
             else: 
                 if appointment_time <= app_time and app_time < appointment_time_end and appointment_time_end <= app_time_end:
-                    print("Al doilea if")
-                    return jsonify({"error": "There is already an appointment at this date and hour"}), 401
+                    error = 2
+                    error_time = appointment_time
+                    last_result_plus = get_suggestions_for_later(error_time, app_date, appointments)
+                    last_result_minus = get_suggestions_for_earlier(error_time, app_date, appointments)
+                    if result_plus is None:
+                        result_plus = last_result_plus
+                    else:
+                        if result_plus > last_result_plus:
+                            result_plus = last_result_plus
+                    if result_minus is None:
+                        result_minus = last_result_minus
+                    else:
+                        if result_minus < last_result_minus:
+                            result_minus = last_result_minus
                 else:
                     if app_time <= appointment_time and appointment_time < app_time_end and app_time_end <= appointment_time_end:
-                        print("Al treilea if")
-                        return jsonify({"error": "There is already an appointment at this date and hour"}), 401
-    
-    # To do: da sugestie de cea mai apropiata data si ora libera;
+                        error = 2
+                        error_time = appointment_time
+                        last_result_plus = get_suggestions_for_later(error_time, app_date, appointments)
+                        last_result_minus = get_suggestions_for_earlier(error_time, app_date, appointments)
+                        if result_plus is None:
+                            result_plus = last_result_plus
+                        else:
+                            if result_plus > last_result_plus:
+                                result_plus = last_result_plus
+                        if result_minus is None:
+                            result_minus = last_result_minus
+                        else:
+                            if result_minus < last_result_minus:
+                                result_minus = last_result_minus
+
+    # print("Sugg for later: " + str(result_plus))
+    # print("Sugg for ealier: " + str(result_minus))
+
+    if error == 1:
+        return jsonify({"error": "Date and time can't be in the past"}), 401
+    if error == 2:
+        if result_plus is None and result_minus is None:
+            return jsonify({"error": "There is already an appointment at this date and hour. There's no empty spot today, try another day!"}), 401
+        else:
+            if result_plus is not None and result_minus is not None:
+                if abs(int(app_time[0:2]) - int(result_plus[0:2])) > abs(int(app_time[0:2]) - int(result_minus[0:2])):
+                    return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_minus)}), 401
+                else:
+                    if abs(int(app_time[0:2]) - int(result_plus[0:2])) < abs(int(app_time[0:2]) - int(result_minus[0:2])):
+                        return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_plus)}), 401
+                    else:
+                        if abs(int(app_time[3:5]) - int(result_plus[3:5])) > abs(int(app_time[3:5]) - int(result_minus[3:5])):
+                            return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_minus)}), 401
+                        else:
+                            return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_plus)}), 401
+            else:
+                if result_plus is None:
+                    return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_minus)}), 401
+                else:
+                    return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_plus)}), 401
 
     new_appointment = Appointment(building_id=building_id, user_id=user_id, app_date=app_date, app_time=app_time)
     db.session.add(new_appointment)
