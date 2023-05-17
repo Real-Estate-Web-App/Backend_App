@@ -359,19 +359,28 @@ def make_appointment():
             return jsonify({"error": "There is already an appointment at this date and hour. There's no empty spot today, try another day!"}), 401
         else:
             if result_plus is not None and result_minus is not None:
-                if abs(int(app_time[0:2]) - int(result_plus[0:2])) > abs(int(app_time[0:2]) - int(result_minus[0:2])):
+                if abs(int(app_time[0:2]) - int(result_plus[0:2])) > abs(int(app_time[0:2]) - int(result_minus[0:2])) and ((app_date != date) or ((app_date == date) and (app_time[0:2] < result_minus[0:2]))):
+                    # print("time: " + app_time[0:2])
+                    # print("result_minus: " + result_minus[0:2])
                     return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_minus)}), 401
                 else:
                     if abs(int(app_time[0:2]) - int(result_plus[0:2])) < abs(int(app_time[0:2]) - int(result_minus[0:2])):
                         return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_plus)}), 401
                     else:
-                        if abs(int(app_time[3:5]) - int(result_plus[3:5])) > abs(int(app_time[3:5]) - int(result_minus[3:5])):
+                        if abs(int(app_time[3:5]) - int(result_plus[3:5])) > abs(int(app_time[3:5]) - int(result_minus[3:5])) and ((app_date != date) or ((app_date == date) and (app_time[0:2] < result_minus[0:2]))):
+                            # print("time: " + app_time[0:2])
+                            # print("result_minus: " + result_minus[0:2])
                             return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_minus)}), 401
                         else:
                             return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_plus)}), 401
             else:
                 if result_plus is None:
-                    return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_minus)}), 401
+                    if (app_date != date) or ((app_date == date) and (app_time[0:2] < result_minus[0:2])):
+                        # print("time: " + app_time[0:2])
+                        # print("result_minus: " + result_minus[0:2])
+                        return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_minus)}), 401
+                    else:
+                        return jsonify({"error": "There is already an appointment at this date and hour. There's no empty spot today, try another day!"}), 401
                 else:
                     return jsonify({"error": "There is already an appointment at this date and hour. The next empty spot for the chosen day is: %s!" % (result_plus)}), 401
 
